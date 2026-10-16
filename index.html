@@ -5,10 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A0C0F">
 <title>Pusula Canlı</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="simge/simge-192.png" type="image/png">
+<link rel="apple-touch-icon" href="simge/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pusula">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
+/* Yazı tipi bu sitenin kendi dosyalarından gelir (internetsiz çalışır). Atkinson Hyperlegible, SIL Open Font License. */
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("yazitipi/atkinson-hyperlegible-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("yazitipi/atkinson-hyperlegible-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("yazitipi/atkinson-hyperlegible-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("yazitipi/atkinson-hyperlegible-latin-ext-700-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
 /* Same visual language as the Pusula photo test: safety yellow on near-black, Atkinson Hyperlegible. */
 :root {
   --bg: #0A0C0F; --surface: #151A20; --ink: #F3F5F7; --muted: #A9B3BE; --line: #2C343E;
@@ -45,6 +62,7 @@ h1 { font-size: 1.8rem; margin: 0; }
 .dir span.tehlike { background: var(--danger); color: var(--danger-ink); border-color: var(--danger); }
 
 .models { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; }
+.models div:last-child { grid-column: 1 / -1; }
 .models div { border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
 .models b { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .models span { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -72,7 +90,7 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
 <div class="wrap">
   <header>
     <h1>Pusula Canlı</h1>
-    <span class="tag">Deneme sürümü 4.1</span>
+    <span class="tag">Deneme sürümü 5</span>
   </header>
 
   <div id="uyari" class="alert" role="alert" hidden></div>
@@ -91,7 +109,9 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
   <div class="models" aria-label="Yapay zekâ durumu">
     <div><b>Nesne tanıma</b><span id="nesneDurum">Kapalı</span></div>
     <div><b>Derinlik</b><span id="derinDurum">Kapalı</span></div>
+    <div><b>İnternetsiz kullanım</b><span id="kurulumDurum">Denetleniyor…</span></div>
   </div>
+  <p class="note" id="anaEkranNotu" hidden><b>İnternetsiz kullanım için ana ekrana ekleyin.</b> Safari'de alttaki Paylaş düğmesine basın, ardından "Ana Ekrana Ekle"yi seçin. Pusula'yı bundan sonra ana ekrandaki simgesinden açın.</p>
 
   <button id="baslat" type="button">Başlat</button>
 
@@ -115,18 +135,22 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
   </section>
 
   <p class="note"><b>Bastonun yerine kullanmayın.</b> İki yapay zekâ birlikte çalışır. Nesne tanıma insan, araç, bisiklet, sandalye, köpek gibi yaklaşık 80 türü adıyla söyler. Derinlik modeli ne olduğunu bilmese de yakındaki direk, duvar, ağaç ve dal gibi engelleri "engel" olarak bildirir.</p>
-  <p class="note"><b>Çukur ve aşağı basamak uyarısı deneme aşamasındadır.</b> Büyük çukurları, kazı alanlarını, aşağı inen merdivenleri ve platform kenarlarını yaklaşık 2,5 ile 6 metre ileriden haber vermeye çalışır. Kamera ayağınızın hemen önünü göremez; en yakın 2 metreyi bastonunuzla kontrol edin. Sığ çukurlar, tek basamak, kaldırım kenarı ve içi su dolu çukurlar kaçabilir.</p>
-  <p class="note">Derinlik modeli ilk açılışta yaklaşık 25–50 MB indirir; Wi-Fi'de açmanız önerilir. Görüntü telefonunuzdan dışarı gönderilmez.</p>
+  <p class="note"><b>Çukur ve aşağı basamak uyarısı deneme aşamasındadır.</b> Yürüdüğünüz yöndeki büyük çukurları, kazı alanlarını, aşağı inen merdivenleri ve platform kenarlarını yaklaşık 2,5 ile 6 metre ileriden haber vermeye çalışır. Telefon hızlı çevrilirken ve karanlık zeminde karar vermez. Kamera ayağınızın hemen önünü göremez; en yakın 2 metreyi bastonunuzla kontrol edin. Sığ çukurlar, tek basamak, kaldırım kenarı ve içi su dolu çukurlar kaçabilir.</p>
+  <p class="note"><b>Tamamen telefonunuzda çalışır.</b> İlk açılışta yapay zekâ dosyaları (yaklaşık 60 MB) bir kez indirilir; Wi-Fi'de açmanız önerilir. Sonra internet olmadan, uçak modunda bile çalışır. Görüntü telefonunuzdan hiçbir yere gönderilmez.</p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script src="lib/ort.wasm.min.js"></script>
 <script>
 (function () {
   "use strict";
 
-  const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0";
-  const DERINLIK_MODELI = "onnx-community/depth-anything-v2-small";
+  // ---- Bu sitenin kendi dosyaları: ilk açılışta telefona kaydedilir, sonra internetsiz kullanılır ----
+  const DOSYALAR = {
+    calismaMotoru: { yol: "lib/ort-wasm-simd-threaded.wasm", boyut: 13961845, tur: "application/wasm" },
+    nesne: { yol: "modeller/nesne-yolo11n-320.onnx", boyut: 10615288, tur: "application/octet-stream" },
+    derinlik: { yol: "modeller/derinlik-v2s-q8.onnx", boyut: 35392818, tur: "application/octet-stream" }
+  };
+  const MODEL_ONBELLEGI = "pusula-modeller-v1";   // sw.js ile aynı ad olmalı
 
   // ---- Türkçe nesne adları (COCO sınıfları) ----
   const AD = {
@@ -170,10 +194,13 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     const merkez = (x + bw / 2) / w;
     const yon = merkez < 0.36 ? "sol" : merkez > 0.64 ? "sag" : "on";
     let oran = bh / h;
-    if (ARAC.has(d.class)) oran *= 1.5;      // araçlar küçük görünse de tehlikelidir
+    // Önden gelen araç küçük görünse de tehlikelidir; yandaki (çoğu zaman park etmiş) araçlara bu pay verilmez
+    if (ARAC.has(d.class) && yon === "on") oran *= 1.5;
     const e = ESIK[hassas] || ESIK[2];
     const seviye = oran >= e.tehlike ? "tehlike" : oran >= e.dikkat ? "dikkat" : "yok";
     if (seviye === "yok") return null;
+    // Odak önde: yandaki insan, araç ve eşyalar yalnızca burnunuzun dibindeyse söylenir
+    if (yon !== "on" && seviye !== "tehlike") return null;
     return { kaynak: "nesne", sinif: d.class, ad: AD[d.class] || d.class, yon, seviye, puan: oran, bbox: d.bbox };
   }
 
@@ -223,7 +250,8 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     return { egim, kesisim: yuzdelik(noktalar.map((p) => p[1] - egim * p[0]), 0.5) };
   }
 
-  function zeminOlc(data, w, h, beta) {
+  // lum: (isteğe bağlı) aynı boyutta parlaklık haritası 0–255; karanlık bölgelerde çukur kararı verilmez
+  function zeminOlc(data, w, h, beta, lum) {
     const BANT = 42;
     let yh = ufukSatiri(beta);
     const sensorlu = yh !== null;
@@ -233,7 +261,8 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
       if (sensorlu) { const m = satirMesafe(yc, yh); if (!(m <= 7 && m >= 0.4)) continue; }
       else if (yc < 0.56) continue;
       // %35'lik değer: sütunun en az üçte birini kaplayan bir çukur bu değeri aşağı çeker
-      bantlar.push({ yc, y0, y1, deg: [0, 1, 2].map((c) => yuzdelik(bolge(data, w, h, c / 3, (c + 1) / 3, y0, y1), 0.35)) });
+      const isik = lum ? [0, 1, 2].map((c) => { const b = bolge(lum, w, h, c / 3, (c + 1) / 3, y0, y1); return b.reduce((s, v) => s + v, 0) / (b.length || 1); }) : null;
+      bantlar.push({ yc, y0, y1, isik, deg: [0, 1, 2].map((c) => yuzdelik(bolge(data, w, h, c / 3, (c + 1) / 3, y0, y1), 0.35)) });
     }
     if (bantlar.length < 8) return null;
     // Beklenen zemin doğrusu, kullanıcının hemen önündeki en yakın zeminden uydurulur.
@@ -241,8 +270,14 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     // sensör yalnızca hangi satırların zemin olduğunu ve uzaklıkları belirler.
     const nok = [];
     bantlar.slice(Math.floor(bantlar.length * 0.6)).forEach((b) => b.deg.forEach((v) => nok.push([b.yc, v])));
-    const f = theilSen(nok);
+    let f = theilSen(nok);
     if (!f || !(f.egim > 0)) return null;
+    // Önümüzdeki yakın engeller (kutu, direk dibi) zemin doğrusunu yukarı iter: zeminden belirgin yakın noktaları atıp yeniden uydur
+    const zeminNok = nok.filter((p) => p[1] <= 1.2 * (f.egim * p[0] + f.kesisim));
+    if (zeminNok.length >= nok.length * 0.5 && zeminNok.length < nok.length) {
+      const f2 = theilSen(zeminNok);
+      if (f2 && f2.egim > 0) f = f2;
+    }
     const beklenen = (y) => f.egim * y + f.kesisim;
     // Düz zeminin doğrusu ufukta sıfıra iner: ufku görüntüden de bulabiliriz.
     // Sensörle en fazla ~10° farklıysa uzaklık hesabında görüntüdeki ufuk kullanılır (sensör yürürken titrer).
@@ -253,7 +288,7 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     else if (Math.abs(yhVeri - yh) > 2 * izin) return null;   // sensör ile görüntü çelişiyor: karar verme
     const satirlar = bantlar.map((b) => {
       const e = beklenen(b.yc);
-      return { y0: b.y0, y1: b.y1, mesafe: satirMesafe(b.yc, yh), r: b.deg.map((v) => (e > 0 ? v / e : 1)) };
+      return { y0: b.y0, y1: b.y1, mesafe: satirMesafe(b.yc, yh), isik: b.isik, r: b.deg.map((v) => (e > 0 ? v / e : 1)) };
     });
     // Önümüzdeki zemin gerçekten düz bir zemine benziyor mu? Benzemiyorsa (duvar, kalabalık) karar verme
     let uyan = 0, toplam = 0;
@@ -262,10 +297,14 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     return { satirlar, altBeklenen: beklenen(0.94), sensorlu };
   }
 
-  // durumBilgi: { karanlik, yukariBakiyor }
+  const ZEMIN_KARANLIK = 35;   // bu parlaklığın altındaki zemin bantlarında derinlik güvenilmez
+
+  // durumBilgi: { karanlik, yukariBakiyor, donuyor }
+  // Çukur yalnızca yürüme yönünde (orta sütun) aranır: yanlardaki yol, otopark ya da bahçe zemini çukur sayılmaz.
+  // Üç sütun birden düşükse geniş bir kenar (aşağı inen merdiven, platform kenarı) vardır.
   function zeminAdaylar(z, hassas, durumBilgi) {
     const bilgi = durumBilgi || {};
-    if (!z || bilgi.karanlik || bilgi.yukariBakiyor) return [];
+    if (!z || bilgi.karanlik || bilgi.yukariBakiyor || bilgi.donuyor) return [];
     const T = ZESIK[hassas] || ZESIK[2];
     const sutun = [0, 1, 2].map((c) => {
       let run = [], bulunan = null;
@@ -273,12 +312,15 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
         if (run.length >= 2) bulunan = { yakin: Math.min(...run.map((s) => s.mesafe)), y0: run[0].y0, y1: run[run.length - 1].y1 };
         run = [];
       };
-      z.satirlar.forEach((s) => { if (s.r[c] < 1 - T && s.mesafe <= 6.5) run.push(s); else bitir(); });
+      z.satirlar.forEach((s) => {
+        const aydinlik = !s.isik || s.isik[c] >= ZEMIN_KARANLIK;
+        if (aydinlik && s.r[c] < 1 - T && s.mesafe <= 6.5) run.push(s); else bitir();
+      });
       bitir();
       return bulunan;                      // uzaktan yakına tarandığı için sonuncusu en yakın olandır
     });
+    if (!sutun[1]) return [];
     const sayi = sutun.filter(Boolean).length;
-    if (!sayi) return [];
     // Eğim sensörü yoksa uzaklık güvenilmez: adım sayısı söylenmez, uyarı "dikkat" seviyesinde kalır
     const aday = (yon, b, sinif, ad) => ({
       kaynak: "zemin", sinif, ad, yon, seviye: z.sensorlu && b.yakin <= 3.5 ? "tehlike" : "dikkat",
@@ -289,20 +331,16 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
       const b = sutun.reduce((a, x) => (x.yakin < a.yakin ? x : a));
       return [Object.assign(aday("on", b, "kenar", "aşağı inen basamak ya da kenar"), { genis: true })];
     }
-    const out = [];
-    sutun.forEach((b, i) => {
-      if (!b) return;
-      const a = aday(YONLER[i], b, "cukur", "çukur");
-      if (i === 1) { const sol = !sutun[0], sag = !sutun[2]; a.acik = sol && sag ? "iki" : sol ? "sol" : sag ? "sag" : null; }
-      out.push(a);
-    });
-    return out;
+    const a = aday("on", sutun[1], "cukur", "çukur");
+    const sol = !sutun[0], sag = !sutun[2];
+    a.acik = sol && sag ? "iki" : sol ? "sol" : sag ? "sag" : null;
+    return [a];
   }
 
-  function derinlikOlc(data, w, h, beta) {
+  function derinlikOlc(data, w, h, beta, lum) {
     const genel = bolge(data, w, h, 0, 1, 0, 1);
     const p5 = yuzdelik(genel, 0.05), p95 = yuzdelik(genel, 0.95);
-    const zeminBilgi = zeminOlc(data, w, h, beta === undefined ? null : beta);
+    const zeminBilgi = zeminOlc(data, w, h, beta === undefined ? null : beta, lum || null);
     let zemin = zeminBilgi ? zeminBilgi.altBeklenen : yuzdelik(bolge(data, w, h, 0.3, 0.7, 0.88, 1), 0.5);
     if (!(zemin > 0)) zemin = yuzdelik(bolge(data, w, h, 0.3, 0.7, 0.88, 1), 0.5);
     if (!(zemin > 0)) zemin = yuzdelik(genel, 0.5) || 1;
@@ -323,7 +361,9 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     const out = [];
     olcum.oranlar.forEach((o, i) => {
       const seviye = o >= e.tehlike ? "tehlike" : o >= e.dikkat ? "dikkat" : "yok";
-      if (seviye !== "yok") out.push({ kaynak: "derinlik", sinif: "engel", ad: "engel", yon: YONLER[i], seviye, puan: o });
+      // Odak önde: yanlardaki duvar, dükkân önü ve bitkiler yürürken hep yakındadır ve söylenmez.
+      // Yoldaki bir şey yürüme yönüne girdiğinde zaten "önünde" olarak bildirilir.
+      if (seviye !== "yok" && i === 1) out.push({ kaynak: "derinlik", sinif: "engel", ad: "engel", yon: YONLER[i], seviye, puan: o });
     });
     return out;
   }
@@ -380,8 +420,79 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
   // Bekleyen derinlik sonucu ne kadar eskiyse kullanılabilir (yavaş telefonlarda da çalışsın)
   function derinlikTazeMi(yas, sureMs) { return yas < Math.max(2000, 2.5 * (sureMs || 0)); }
 
+  // ================= Yapay zekâ motoru (ONNX Runtime, tamamen cihaz içinde) =================
+  // Nesne tanıma: YOLO11n (COCO, 80 nesne), 320x320 giriş. Derinlik: Depth Anything V2 Small (8 bit).
+  const COCO = ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
+    "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear",
+    "zebra", "giraffe", "backpack", "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
+    "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork",
+    "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake",
+    "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard",
+    "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
+    "hair drier", "toothbrush"];
+  const NESNE_GIRDI = 320;
+  const IMAGENET_ORT = [0.485, 0.456, 0.406], IMAGENET_SS = [0.229, 0.224, 0.225];
+
+  // Görüntüyü 320x320'ye oranını bozmadan sığdırır (kenarlar gri), modele uygun sayı dizisine çevirir
+  function nesneGirdisi(kaynak, kW, kH, tuval) {
+    const N = NESNE_GIRDI, c = tuval.getContext("2d", { willReadFrequently: true });
+    if (tuval.width !== N) { tuval.width = N; tuval.height = N; }
+    const olcek = Math.min(N / kW, N / kH), nw = Math.round(kW * olcek), nh = Math.round(kH * olcek);
+    const padX = Math.floor((N - nw) / 2), padY = Math.floor((N - nh) / 2);
+    c.fillStyle = "rgb(114,114,114)"; c.fillRect(0, 0, N, N);
+    c.drawImage(kaynak, padX, padY, nw, nh);
+    const px = c.getImageData(0, 0, N, N).data, alan = N * N, veri = new Float32Array(3 * alan);
+    for (let i = 0, j = 0; j < alan; i += 4, j += 1) {
+      veri[j] = px[i] / 255; veri[alan + j] = px[i + 1] / 255; veri[2 * alan + j] = px[i + 2] / 255;
+    }
+    return { veri, olcek, padX, padY };
+  }
+
+  function iou(a, b) {
+    const x1 = Math.max(a[0], b[0]), y1 = Math.max(a[1], b[1]);
+    const x2 = Math.min(a[0] + a[2], b[0] + b[2]), y2 = Math.min(a[1] + a[3], b[1] + b[3]);
+    const kes = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    return kes / (a[2] * a[3] + b[2] * b[3] - kes + 1e-9);
+  }
+
+  // YOLO çıktısı [1, 84, A]: her aday için 4 kutu değeri (merkez x, merkez y, genişlik, yükseklik) + 80 nesne puanı
+  function yoloCoz(cikti, A, esik, olcek, padX, padY, kW, kH) {
+    const adaylar = [];
+    for (let i = 0; i < A; i += 1) {
+      let enIyi = 0, sinif = -1;
+      for (let k = 0; k < 80; k += 1) { const p = cikti[(4 + k) * A + i]; if (p > enIyi) { enIyi = p; sinif = k; } }
+      if (enIyi < esik) continue;
+      const cx = cikti[i], cy = cikti[A + i], w = cikti[2 * A + i], h = cikti[3 * A + i];
+      let x = (cx - w / 2 - padX) / olcek, y = (cy - h / 2 - padY) / olcek;
+      let x2 = (cx + w / 2 - padX) / olcek, y2 = (cy + h / 2 - padY) / olcek;
+      x = Math.max(0, x); y = Math.max(0, y); x2 = Math.min(kW, x2); y2 = Math.min(kH, y2);
+      if (x2 - x < 2 || y2 - y < 2) continue;
+      adaylar.push({ class: COCO[sinif], score: enIyi, bbox: [x, y, x2 - x, y2 - y] });
+    }
+    adaylar.sort((a, b) => b.score - a.score);
+    const secilen = [];
+    for (const a of adaylar) {
+      if (secilen.length >= 20) break;
+      if (!secilen.some((s) => s.class === a.class && iou(s.bbox, a.bbox) > 0.45)) secilen.push(a);
+    }
+    return secilen;
+  }
+
+  // Derinlik girdisi: ImageNet ortalamasıyla normalize edilmiş RGB, kanal kanal
+  function derinlikGirdisi(px, w, h) {
+    const alan = w * h, veri = new Float32Array(3 * alan), lum = new Float32Array(alan);
+    for (let i = 0, j = 0; j < alan; i += 4, j += 1) {
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+      veri[j] = (r / 255 - IMAGENET_ORT[0]) / IMAGENET_SS[0];
+      veri[alan + j] = (g / 255 - IMAGENET_ORT[1]) / IMAGENET_SS[1];
+      veri[2 * alan + j] = (b / 255 - IMAGENET_ORT[2]) / IMAGENET_SS[2];
+      lum[j] = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+    return { veri, lum };
+  }
+
   if (typeof module !== "undefined") {
-    module.exports = { degerlendir, derinlikOlc, derinlikAdaylar, zeminAdaylar, birlestir, cumle, egimDurumu, derinlikTazeMi };
+    module.exports = { degerlendir, derinlikOlc, derinlikAdaylar, zeminAdaylar, birlestir, cumle, egimDurumu, derinlikTazeMi, yoloCoz, derinlikGirdisi, COCO };
     return;
   }
 
@@ -506,10 +617,21 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
   }
 
   // ---- Telefon eğimi ----
-  const egim = { beta: null, gamma: null, durum: "bilinmiyor", sonUyari: 0, ne_zamandan: 0 };
+  // Telefon hızlı çevrilirken (saniyede 70°'den hızlı) görüntü bulanıklaşır: o anda çukur kararı verilmez
+  const DONUS_SINIRI = 70;
+  const egim = { beta: null, gamma: null, alfa: null, zaman: 0, donus: 0, durum: "bilinmiyor", sonUyari: 0, ne_zamandan: 0 };
+  function aciFarki(a, b) { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }
   function egimDinle(e) {
     // Sensörü olmayan cihazlar boş (null) bir olay gönderir; bilinen değerin üzerine yazmasın
     if (e.beta == null || e.gamma == null) return;
+    const simdi = performance.now();
+    if (egim.beta != null && egim.zaman && simdi > egim.zaman) {
+      const sn = (simdi - egim.zaman) / 1000;
+      const fark = Math.max(Math.abs(e.beta - egim.beta), e.alpha != null && egim.alfa != null ? aciFarki(e.alpha, egim.alfa) : 0);
+      const hiz = Math.min(720, fark / Math.max(sn, 0.01));
+      egim.donus = egim.donus * 0.6 + hiz * 0.4;     // kısa titreşimleri yumuşat
+    }
+    egim.zaman = simdi; egim.alfa = e.alpha;
     egim.beta = e.beta; egim.gamma = e.gamma;
     const yeni = egimDurumu(e.beta, e.gamma);
     if (yeni !== egim.durum) { egim.durum = yeni; egim.ne_zamandan = Date.now(); }
@@ -583,8 +705,90 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
 
   function durumGoster(m, seviye) { durum.textContent = m; durum.dataset.level = seviye || ""; }
 
-  // ---- Derinlik modeli ----
-  const derinlik = { durum: "kapali", tjs: null, pipe: null, ip: null, cihaz: "", olcum: null, zaman: 0, ms: 0, donuyor: false };
+  // ---- Dosya indirme ve telefona kaydetme ----
+  // Dosya önce telefondaki kayıtta aranır; yoksa bu siteden indirilir ve kaydedilir. Böylece ikinci açılıştan sonra internet gerekmez.
+  async function onbellek() {
+    try { return "caches" in window ? await caches.open(MODEL_ONBELLEGI) : null; } catch (e) { return null; }
+  }
+  async function onbellekteMi(d) {
+    const c = await onbellek();
+    if (!c) return false;
+    try { return !!(await c.match(new URL(d.yol, location.href).href)); } catch (e) { return false; }
+  }
+  async function dosyaGetir(d, ilerleme) {
+    const url = new URL(d.yol, location.href).href;
+    const c = await onbellek();
+    if (c) {
+      try { const kayitli = await c.match(url); if (kayitli) { ilerleme && ilerleme(1); return await kayitli.arrayBuffer(); } } catch (e) {}
+    }
+    const yanit = await fetch(url, { cache: "no-cache" });
+    if (!yanit.ok) throw new Error(`${d.yol} indirilemedi (${yanit.status})`);
+    buOturumdaIndirildi = true;
+    const toplam = Number(yanit.headers.get("content-length")) || d.boyut;
+    let buf;
+    if (yanit.body && yanit.body.getReader) {
+      const okuyucu = yanit.body.getReader(), parcalar = [];
+      let alinan = 0;
+      for (;;) {
+        const { done, value } = await okuyucu.read();
+        if (done) break;
+        parcalar.push(value); alinan += value.length;
+        ilerleme && ilerleme(Math.min(1, alinan / toplam));
+      }
+      const tum = new Uint8Array(alinan); let k = 0;
+      for (const p of parcalar) { tum.set(p, k); k += p.length; }
+      buf = tum.buffer;
+    } else { buf = await yanit.arrayBuffer(); ilerleme && ilerleme(1); }
+    if (c) { try { await c.put(url, new Response(buf.slice(0), { headers: { "Content-Type": d.tur } })); } catch (e) { console.warn("Kaydedilemedi", d.yol, e); } }
+    return buf;
+  }
+
+  // ---- Çalışma motoru (ONNX Runtime, tek iş parçacığı: iPhone'da doğrulanmış düzen) ----
+  let motorSozu = null;
+  function motoruHazirla(ilerleme) {
+    if (motorSozu) return motorSozu;
+    motorSozu = (async () => {
+      if (typeof ort === "undefined") throw new Error("Çalışma motoru dosyası yüklenemedi");
+      const wasm = await dosyaGetir(DOSYALAR.calismaMotoru, ilerleme);
+      ort.env.wasm.numThreads = 1;
+      ort.env.wasm.proxy = false;
+      ort.env.wasm.wasmBinary = wasm;
+      ort.env.wasm.wasmPaths = {
+        mjs: new URL("lib/ort-wasm-simd-threaded.mjs", location.href).href,
+        wasm: new URL(DOSYALAR.calismaMotoru.yol, location.href).href
+      };
+    })();
+    motorSozu.catch(() => { motorSozu = null; });
+    return motorSozu;
+  }
+  // Modeller aynı iş parçacığını paylaşır: çalıştırmalar sırayla yapılır
+  let kuyruk = Promise.resolve();
+  function sirayla(is) { const p = kuyruk.then(is, is); kuyruk = p.catch(() => {}); return p; }
+
+  function hataMetni(e) {
+    const m = (e && (e.message || e.name)) || String(e);
+    return m.replace(/\s+/g, " ").slice(0, 160);
+  }
+
+  // ---- Nesne tanıma (YOLO11n) ----
+  const nesneTuval = document.createElement("canvas");
+  let nesneOturum = null;
+  async function nesneYukle(ilerleme) {
+    await motoruHazirla((x) => ilerleme && ilerleme(x * 0.55));
+    const buf = await dosyaGetir(DOSYALAR.nesne, (x) => ilerleme && ilerleme(0.55 + x * 0.45));
+    nesneOturum = await ort.InferenceSession.create(buf, { executionProviders: ["wasm"] });
+  }
+  async function nesneAlgila() {
+    const W = video.videoWidth, H = video.videoHeight;
+    const g = nesneGirdisi(video, W, H, nesneTuval);
+    const o = await sirayla(() => nesneOturum.run({ [nesneOturum.inputNames[0]]: new ort.Tensor("float32", g.veri, [1, 3, NESNE_GIRDI, NESNE_GIRDI]) }));
+    const c = o[nesneOturum.outputNames[0]];
+    return yoloCoz(c.data, c.dims[2], 0.4, g.olcek, g.padX, g.padY, W, H);
+  }
+
+  // ---- Derinlik modeli (Depth Anything V2 Small) ----
+  const derinlik = { durum: "kapali", oturum: null, olcum: null, zaman: 0, ms: 0, donuyor: false,
+    zeminOnayli: [], zeminOnceki: new Set() };
 
   function tuvalHazirla() {
     const vw = video.videoWidth || 960, vh = video.videoHeight || 1280, uzun = 252;
@@ -592,89 +796,51 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     if (vh >= vw) { ch = uzun; cw = Math.max(112, Math.round((uzun * vw) / vh / 14) * 14); }
     else { cw = uzun; ch = Math.max(112, Math.round((uzun * vh) / vw / 14) * 14); }
     if (derinTuval.width !== cw || derinTuval.height !== ch) { derinTuval.width = cw; derinTuval.height = ch; }
-    if (derinlik.ip) derinlik.ip.size = { width: cw, height: ch };
     if (video.readyState >= 2) derinCtx.drawImage(video, 0, 0, cw, ch);
     else { derinCtx.fillStyle = "#777"; derinCtx.fillRect(0, 0, cw, ch); }
+    return { cw, ch };
   }
 
-  // İşlemciyi ve modeli doğrudan çağırır: ara adımlar atlanır, fp16 çıktısı da güvenle float32'ye çevrilir
   async function derinlikCalistir() {
-    tuvalHazirla();
-    const img = derinlik.tjs.RawImage.fromCanvas(derinTuval);
+    const { cw, ch } = tuvalHazirla();
+    const g = derinlikGirdisi(derinCtx.getImageData(0, 0, cw, ch).data, cw, ch);   // lum: karanlık zeminde çukur kararı verilmez
     const t0 = performance.now();
-    const girdi = await derinlik.pipe.processor(img);
-    const cikti = await derinlik.pipe.model(girdi);
-    let t = cikti.predicted_depth;
-    if (t.type !== "float32") t = t.to("float32");
+    const o = await sirayla(() => derinlik.oturum.run({ [derinlik.oturum.inputNames[0]]: new ort.Tensor("float32", g.veri, [1, 3, ch, cw]) }));
+    const t = o[derinlik.oturum.outputNames[0]];
     const [h, w] = t.dims.slice(-2);
     // Eğim yalnızca telefon dik (portre) tutulurken anlamlı; yan çevrilmiş ya da bilinmiyorsa verilmez
     const beta = egim.beta != null && egim.durum !== "yatay" ? egim.beta : null;
-    const olcum = derinlikOlc(t.data, w, h, beta);
+    const olcum = derinlikOlc(t.data, w, h, beta, w === cw && h === ch ? g.lum : null);
     derinlik.ms = performance.now() - t0;
     return olcum;
   }
 
-  // iPhone ve iPad'deki bütün tarayıcılar (Safari motoru) ile Mac Safari: kütüphane burada GPU'suz çalışma dosyası kullanır
-  const APPLE_TARAYICI = /iP(hone|ad|od)/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ||
-    /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
-
-  // GPU yalnızca gerçekten varsa ve yarım duyarlıklı (fp16) hesaplamayı destekliyorsa denenir; yoksa boşuna 50 MB inmesin
-  async function gpuKullanilabilir() {
-    if (APPLE_TARAYICI || !navigator.gpu) return false;
-    try {
-      const adaptor = await navigator.gpu.requestAdapter();
-      return !!(adaptor && adaptor.features && adaptor.features.has("shader-f16"));
-    } catch (e) { return false; }
-  }
-
-  function hataMetni(e) {
-    const m = (e && (e.message || e.name)) || String(e);
-    return m.replace(/\s+/g, " ").slice(0, 160);
-  }
-
   async function derinlikYukle() {
     if (derinlik.durum === "hazir" || derinlik.durum === "yukleniyor") return;
-    derinlik.durum = "yukleniyor"; derinYaz("İndiriliyor…");
-    const hatalar = [];
+    derinlik.durum = "yukleniyor";
     try {
-      let tjs;
-      try { tjs = await import(TRANSFORMERS_URL); }
-      catch (e) { hatalar.push("kütüphane: " + hataMetni(e)); throw e; }
-      tjs.env.allowLocalModels = false;
-      derinlik.tjs = tjs;
-      const ilerleme = (p) => {
-        if (p && p.status === "progress" && p.total > 5e6 && isFinite(p.progress)) derinYaz(`İndiriliyor %${Math.round(p.progress)}`);
-      };
-      const denemeler = [];
-      if (await gpuKullanilabilir()) denemeler.push({ device: "webgpu", dtype: "fp16" });
-      denemeler.push({ device: "wasm", dtype: "q8" }, { device: "wasm", dtype: "fp32" });
-      for (const d of denemeler) {
-        try {
-          derinYaz(d.device === "webgpu" ? "Hazırlanıyor (GPU)…" : "Hazırlanıyor…");
-          const pipe = await tjs.pipeline("depth-estimation", DERINLIK_MODELI, { device: d.device, dtype: d.dtype, progress_callback: ilerleme });
-          derinlik.pipe = pipe;
-          derinlik.ip = (pipe.processor && pipe.processor.image_processor) || pipe.processor;
-          derinlik.cihaz = d.device;
-          await derinlikCalistir();           // deneme çalıştırması: hata varsa sonraki seçeneğe geç
-          break;
-        } catch (e) {
-          console.warn("Derinlik modeli", d, e);
-          hatalar.push(`${d.device}/${d.dtype}: ${hataMetni(e)}`);
-          try { if (derinlik.pipe && derinlik.pipe.dispose) await derinlik.pipe.dispose(); } catch (x) {}
-          derinlik.pipe = null;
-        }
-      }
-      if (!derinlik.pipe) throw new Error("Derinlik modeli çalıştırılamadı");
+      const kayitli = await onbellekteMi(DOSYALAR.derinlik);
+      derinYaz(kayitli ? "Hazırlanıyor…" : "İndiriliyor…");
+      await motoruHazirla();
+      let sonYuzde = -1;
+      const buf = await dosyaGetir(DOSYALAR.derinlik, (x) => {
+        const y = Math.floor(x * 100);
+        if (!kayitli && y !== sonYuzde) { sonYuzde = y; derinYaz(`İndiriliyor %${y}`); }
+      });
+      derinYaz("Hazırlanıyor…");
+      derinlik.oturum = await ort.InferenceSession.create(buf, { executionProviders: ["wasm"] });
+      await derinlikCalistir();           // deneme çalıştırması
       derinlik.durum = "hazir";
-      derinYaz(derinlik.cihaz === "webgpu" ? "Hazır (GPU)" : "Hazır");
+      derinYaz("Hazır");
       if (calisiyor) soyle("Derinlik modeli hazır.", false);
+      kurulumDenetle(true);
     } catch (e) {
       console.warn(e);
       derinlik.durum = "hata";
       derinYaz("Yüklenemedi");
-      if (!hatalar.length) hatalar.push(hataMetni(e));
-      uyar("Derinlik modeli yüklenemedi. Yalnızca nesne tanıma çalışıyor. Yeniden denemek için Derinlik modeli ayarını kapatıp açın. Teknik ayrıntı: " + hatalar.join(" · "));
+      uyar("Derinlik modeli yüklenemedi. Yalnızca nesne tanıma çalışıyor. " +
+        (navigator.onLine === false ? "İlk kurulum için bir kez internete bağlanmanız gerekiyor. " : "") +
+        "Yeniden denemek için Derinlik modeli ayarını kapatıp açın. Teknik ayrıntı: " + hataMetni(e));
     }
   }
 
@@ -685,9 +851,15 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
       while (calisiyor && ayar.derinlik && derinlik.durum === "hazir") {
         try {
           if (video.readyState >= 2 && !document.hidden) {
+            const donuyorBasta = egim.donus > DONUS_SINIRI;
             derinlik.olcum = await derinlikCalistir();
             derinlik.zaman = Date.now();
-            derinYaz(`${derinlik.cihaz === "webgpu" ? "GPU" : "İşlemci"} · ${Math.round(derinlik.ms)} ms`);
+            // Çukur yalnızca art arda iki ölçümde aynı yerde görülürse onaylanır (tek karelik yanılgılar elenir)
+            const z = ayar.cukur ? zeminAdaylar(derinlik.olcum.zemin, ayar.hassas,
+              { karanlik: isik.karanlik, yukariBakiyor: egim.durum === "yukari", donuyor: donuyorBasta || egim.donus > DONUS_SINIRI }) : [];
+            derinlik.zeminOnayli = z.filter((a) => derinlik.zeminOnceki.has(a.sinif + "|" + a.yon));
+            derinlik.zeminOnceki = new Set(z.map((a) => a.sinif + "|" + a.yon));
+            derinYaz(`Çalışıyor · ${Math.round(derinlik.ms)} ms`);
           }
         } catch (e) { console.warn(e); }
         await new Promise((r) => setTimeout(r, 120));   // telefonu soğutmak için kısa mola
@@ -700,8 +872,31 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     if (calisiyor && ayar.derinlik) derinlikDongu();
   }
 
+  // ---- İnternetsiz kullanım durumu ----
+  const anaEkranda = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  async function kurulumDenetle(yeniBitti) {
+    const kutu = $("kurulumDurum");
+    if (!("serviceWorker" in navigator) || !("caches" in window)) { kutu.textContent = "Bu tarayıcıda yok"; return false; }
+    const hepsi = (await Promise.all(Object.values(DOSYALAR).map(onbellekteMi))).every(Boolean);
+    kutu.textContent = hepsi ? "Hazır" : "İlk açılışta indirilecek";
+    // "Kurulum tamam" yalnızca dosyalar bu açılışta gerçekten indirildiyse söylenir
+    if (hepsi && yeniBitti && buOturumdaIndirildi && !kurulumSoylendi) {
+      kurulumSoylendi = true;
+      try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+      if (calisiyor) soyle("Kurulum tamam. Pusula artık internetsiz de çalışır.", false);
+    }
+    $("anaEkranNotu").hidden = !(IOS && !anaEkranda);
+    return hepsi;
+  }
+  let kurulumSoylendi = false, buOturumdaIndirildi = false;
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch((e) => console.warn("Servis çalışanı kaydedilemedi", e));
+  }
+  kurulumDenetle(false);
+
   // ---- Ana tarama döngüsü ----
-  let model = null, akis = null, calisiyor = false, kilit = null, taraZaman = null;
+  let akis = null, calisiyor = false, kilit = null, taraZaman = null;
   let gorulme = new Map();
   let sonAnahtar = "", sonAdim = null, sonSoylenmeZamani = 0, sonUyariZamani = 0, yolAcikSoylenecek = false;
   let oncekiSeviye = "yok", oncekiTur = "engel", yolAcikGecikme = 2500;
@@ -714,16 +909,14 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
       if (video.readyState >= 2 && !document.hidden) {
         const simdi = Date.now();
         parlaklikOlc(simdi);
-        const tespitler = await model.detect(video, 8, 0.5);
+        const tespitler = await nesneAlgila();
         if (!calisiyor) return;
         const w = video.videoWidth, h = video.videoHeight;
         const nesneAday = tespitler.map((d) => degerlendir(d, w, h, ayar.hassas)).filter(Boolean);
         const yereBakiyor = egim.durum === "asagi";
         const taze = ayar.derinlik && derinlik.olcum && derinlikTazeMi(simdi - derinlik.zaman, derinlik.ms);
         const engelAday = taze ? derinlikAdaylar(derinlik.olcum, ayar.hassas, { karanlik: isik.karanlik, yereBakiyor }) : [];
-        const zeminAday = taze && ayar.cukur
-          ? zeminAdaylar(derinlik.olcum.zemin, ayar.hassas, { karanlik: isik.karanlik, yukariBakiyor: egim.durum === "yukari" })
-          : [];
+        const zeminAday = taze && ayar.cukur && egim.donus <= DONUS_SINIRI ? derinlik.zeminOnayli : [];
         const derinAday = engelAday.concat(zeminAday);
         const adaylar = birlestir(nesneAday, derinAday);
 
@@ -744,7 +937,9 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
           // Aynı uyarı (tür + yön + seviye) tekrar tekrar söylenmez; çukur yaklaştıkça adım sayısı güncellenir
           const anahtar = hedef.sinif + "|" + hedef.yon + "|" + hedef.seviye;
           const yaklasti = zeminMi && anahtar === sonAnahtar && hedef.adim != null && sonAdim != null && hedef.adim < sonAdim;
-          const tekrarSuresi = zeminMi ? (hedef.seviye === "tehlike" ? 2500 : 5000) : (hedef.seviye === "tehlike" ? 3000 : 6000);
+          // Yandaki "yakın" nesneler (park etmiş araba gibi) seyrek tekrarlanır; öndekiler ve çok yakındakiler sık
+          const tekrarSuresi = zeminMi ? (hedef.seviye === "tehlike" ? 2500 : 5000)
+            : hedef.seviye === "tehlike" ? 3000 : hedef.yon === "on" ? 6000 : 15000;
           if (anahtar !== sonAnahtar || yaklasti || simdi - sonSoylenmeZamani > tekrarSuresi) {
             durumGoster(m, hedef.seviye);
             // Konuşma kapalıysa ya da söylenebildiyse "söylendi" say; meşgulse sonraki karede yeniden dener
@@ -788,8 +983,8 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       uyar("Kamera açılamıyor. Bu sayfa güvenli bir adresten (https ile başlayan) açılmalı."); return;
     }
-    if (typeof cocoSsd === "undefined" || typeof tf === "undefined") {
-      uyar("Yapay zekâ kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin."); return;
+    if (typeof ort === "undefined") {
+      uyar("Yapay zekâ çalışma motoru yüklenemedi. Sayfayı kapatıp yeniden açın."); return;
     }
     btn.disabled = true;
     try { if (!ses) ses = new (window.AudioContext || window.webkitAudioContext)(); await ses.resume(); } catch (e) { ses = null; }
@@ -809,14 +1004,24 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     video.srcObject = akis; await video.play().catch(() => {});
     $("bos").hidden = true;
 
-    if (!model) {
-      durumGoster("Yapay zekâ yükleniyor…", ""); nesneYaz("Yükleniyor…"); soyle("Yapay zekâ yükleniyor.", true);
-      try { model = await cocoSsd.load({ base: "lite_mobilenet_v2" }); }
-      catch (e) {
+    if (!nesneOturum) {
+      // İlk açılışta dosyalar indirilir; sonraki açılışlarda telefondaki kayıttan saniyeler içinde yüklenir
+      const ilk = !(await onbellekteMi(DOSYALAR.nesne)) || !(await onbellekteMi(DOSYALAR.calismaMotoru));
+      durumGoster(ilk ? "İlk kurulum: yapay zekâ dosyaları indiriliyor…" : "Yapay zekâ yükleniyor…", "");
+      nesneYaz(ilk ? "İndiriliyor…" : "Yükleniyor…");
+      soyle(ilk ? "İlk kurulum. Yapay zekâ dosyaları indiriliyor. Bu yalnızca bir kez olur." : "Yapay zekâ yükleniyor.", true);
+      let sonYuzde = -1;
+      try {
+        await nesneYukle((x) => {
+          const y = Math.floor(x * 100);
+          if (ilk && y !== sonYuzde) { sonYuzde = y; nesneYaz(`İndiriliyor %${y}`); }
+        });
+      } catch (e) {
         console.warn(e); btn.disabled = false; nesneYaz("Yüklenemedi");
         kameraKapat(); $("bos").hidden = false; durumGoster("Hazır.", "");
-        uyar("Nesne tanıma modeli indirilemedi. İnternet bağlantınızı kontrol edip yeniden deneyin.");
-        soyle("Yapay zekâ indirilemedi.", true); return;
+        uyar("Nesne tanıma modeli yüklenemedi. " + (navigator.onLine === false ? "İlk kurulum için bir kez internete bağlanmanız gerekiyor. " : "") +
+          "Teknik ayrıntı: " + hataMetni(e));
+        soyle("Yapay zekâ yüklenemedi.", true); return;
       }
     }
     nesneYaz("Çalışıyor");
@@ -838,12 +1043,13 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
 
   function dur() {
     calisiyor = false; clearTimeout(bipZaman); clearTimeout(taraZaman); anlik.seviye = "yok"; derinlik.olcum = null;
+    derinlik.zeminOnayli = []; derinlik.zeminOnceki = new Set();
     kameraKapat();
     try { kilit && kilit.release(); } catch (e) {} kilit = null;
     ctx.clearRect(0, 0, katman.width, katman.height); yonCiz(null, null);
     btn.textContent = "Başlat"; btn.classList.remove("calisiyor");
     $("bos").hidden = false; durumGoster("Durduruldu.", "");
-    if (model) nesneYaz("Beklemede");
+    if (nesneOturum) nesneYaz("Beklemede");
     if (derinlik.durum === "hazir") derinYaz("Beklemede");
     sus(); soyle("Durduruldu.", true);
   }
