@@ -72,7 +72,7 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
 <div class="wrap">
   <header>
     <h1>Pusula Canlı</h1>
-    <span class="tag">Deneme sürümü 4</span>
+    <span class="tag">Deneme sürümü 4.1</span>
   </header>
 
   <div id="uyari" class="alert" role="alert" hidden></div>
@@ -614,18 +614,40 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
     return olcum;
   }
 
+  // iPhone ve iPad'deki bütün tarayıcılar (Safari motoru) ile Mac Safari: kütüphane burada GPU'suz çalışma dosyası kullanır
+  const APPLE_TARAYICI = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ||
+    /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+
+  // GPU yalnızca gerçekten varsa ve yarım duyarlıklı (fp16) hesaplamayı destekliyorsa denenir; yoksa boşuna 50 MB inmesin
+  async function gpuKullanilabilir() {
+    if (APPLE_TARAYICI || !navigator.gpu) return false;
+    try {
+      const adaptor = await navigator.gpu.requestAdapter();
+      return !!(adaptor && adaptor.features && adaptor.features.has("shader-f16"));
+    } catch (e) { return false; }
+  }
+
+  function hataMetni(e) {
+    const m = (e && (e.message || e.name)) || String(e);
+    return m.replace(/\s+/g, " ").slice(0, 160);
+  }
+
   async function derinlikYukle() {
     if (derinlik.durum === "hazir" || derinlik.durum === "yukleniyor") return;
     derinlik.durum = "yukleniyor"; derinYaz("İndiriliyor…");
+    const hatalar = [];
     try {
-      const tjs = await import(TRANSFORMERS_URL);
+      let tjs;
+      try { tjs = await import(TRANSFORMERS_URL); }
+      catch (e) { hatalar.push("kütüphane: " + hataMetni(e)); throw e; }
       tjs.env.allowLocalModels = false;
       derinlik.tjs = tjs;
       const ilerleme = (p) => {
         if (p && p.status === "progress" && p.total > 5e6 && isFinite(p.progress)) derinYaz(`İndiriliyor %${Math.round(p.progress)}`);
       };
       const denemeler = [];
-      if (navigator.gpu) denemeler.push({ device: "webgpu", dtype: "fp16" });
+      if (await gpuKullanilabilir()) denemeler.push({ device: "webgpu", dtype: "fp16" });
       denemeler.push({ device: "wasm", dtype: "q8" }, { device: "wasm", dtype: "fp32" });
       for (const d of denemeler) {
         try {
@@ -638,6 +660,7 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
           break;
         } catch (e) {
           console.warn("Derinlik modeli", d, e);
+          hatalar.push(`${d.device}/${d.dtype}: ${hataMetni(e)}`);
           try { if (derinlik.pipe && derinlik.pipe.dispose) await derinlik.pipe.dispose(); } catch (x) {}
           derinlik.pipe = null;
         }
@@ -650,7 +673,8 @@ input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 
       console.warn(e);
       derinlik.durum = "hata";
       derinYaz("Yüklenemedi");
-      uyar("Derinlik modeli yüklenemedi. Yalnızca nesne tanıma çalışıyor. Yeniden denemek için Derinlik modeli ayarını kapatıp açın.");
+      if (!hatalar.length) hatalar.push(hataMetni(e));
+      uyar("Derinlik modeli yüklenemedi. Yalnızca nesne tanıma çalışıyor. Yeniden denemek için Derinlik modeli ayarını kapatıp açın. Teknik ayrıntı: " + hatalar.join(" · "));
     }
   }
 
