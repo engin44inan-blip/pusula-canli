@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0C0F">
+<title>Pusula Canlı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Same visual language as the Pusula photo test: safety yellow on near-black, Atkinson Hyperlegible. */
+:root {
+  --bg: #0A0C0F; --surface: #151A20; --ink: #F3F5F7; --muted: #A9B3BE; --line: #2C343E;
+  --signal: #FFD23F; --signal-ink: #0B0F14; --danger: #FF6B5E; --danger-ink: #0B0F14; --focus: #8AB4FF;
+  --font: "Atkinson Hyperlegible", "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 1.05rem; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: max(12px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+}
+.wrap { max-width: 560px; margin: 0 auto; display: grid; gap: 14px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 1.8rem; margin: 0; }
+.tag { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+
+.view { position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: 52vh; background: #000; border-radius: 14px; overflow: hidden; border: 2px solid var(--line); }
+.view video, .view canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.view .idle { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: var(--muted); }
+
+#durum { font-size: 1.6rem; font-weight: 700; line-height: 1.3; margin: 0; min-height: 2.6em; text-wrap: pretty; }
+#durum[data-level="tehlike"] { color: var(--danger); }
+#durum[data-level="dikkat"] { color: var(--signal); }
+
+.dir { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.dir span { text-align: center; padding: 10px 4px; border-radius: 8px; border: 2px solid var(--line); font-weight: 700; color: var(--muted); }
+.dir span.dikkat { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); }
+.dir span.tehlike { background: var(--danger); color: var(--danger-ink); border-color: var(--danger); }
+
+.models { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; }
+.models div { border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.models b { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.models span { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+#baslat {
+  font: inherit; font-size: 1.6rem; font-weight: 700; min-height: 88px; border-radius: 14px; cursor: pointer;
+  background: var(--signal); color: var(--signal-ink); border: 3px solid var(--signal);
+}
+#baslat.calisiyor { background: transparent; color: var(--ink); border-color: var(--ink); }
+#baslat:disabled { opacity: 0.6; cursor: progress; }
+button:focus-visible, input:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+.settings { display: grid; gap: 12px; background: var(--surface); border: 2px solid var(--line); border-radius: 14px; padding: 16px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.row label { font-weight: 700; }
+.switch { width: 28px; height: 28px; accent-color: var(--signal); }
+input[type="range"] { flex: 1 1 160px; accent-color: var(--signal); min-height: 32px; }
+.val { font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; color: var(--muted); }
+.note { font-size: 0.92rem; color: var(--muted); margin: 0; }
+.note b { color: var(--ink); }
+.alert { border: 2px solid var(--danger); border-radius: 12px; padding: 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Pusula Canlı</h1>
+    <span class="tag">Deneme sürümü 4</span>
+  </header>
+
+  <div id="uyari" class="alert" role="alert" hidden></div>
+
+  <div class="view" aria-hidden="true">
+    <video id="video" playsinline muted></video>
+    <canvas id="katman"></canvas>
+    <div class="idle" id="bos">Başlat'a basın. Telefonu göğüs hizasında, ekranı size dönük ve dik tutun.</div>
+  </div>
+
+  <p id="durum" role="status" aria-live="off">Hazır.</p>
+  <div class="dir" aria-hidden="true">
+    <span data-yon="sol">Sol</span><span data-yon="on">Ön</span><span data-yon="sag">Sağ</span>
+  </div>
+
+  <div class="models" aria-label="Yapay zekâ durumu">
+    <div><b>Nesne tanıma</b><span id="nesneDurum">Kapalı</span></div>
+    <div><b>Derinlik</b><span id="derinDurum">Kapalı</span></div>
+  </div>
+
+  <button id="baslat" type="button">Başlat</button>
+
+  <section class="settings" aria-label="Ayarlar">
+    <div class="row"><label for="konus">Sesli anlatım</label><input type="checkbox" id="konus" class="switch" checked></div>
+    <div class="row"><label for="bip">Yön bipleri</label><input type="checkbox" id="bip" class="switch" checked></div>
+    <div class="row"><label for="titresim">Titreşim</label><input type="checkbox" id="titresim" class="switch" checked></div>
+    <div class="row"><label for="derinlik">Derinlik modeli</label><input type="checkbox" id="derinlik" class="switch" checked></div>
+    <div class="row"><label for="cukur">Çukur ve aşağı basamak uyarısı</label><input type="checkbox" id="cukur" class="switch" checked></div>
+    <div class="row">
+      <label for="hassas">Hassasiyet</label>
+      <input type="range" id="hassas" min="1" max="3" step="1" value="2" aria-valuetext="Orta">
+      <span class="val" id="hassasDeger">Orta</span>
+    </div>
+    <div class="row">
+      <label for="hiz">Konuşma hızı</label>
+      <input type="range" id="hiz" min="0.8" max="1.6" step="0.1" value="1.2">
+      <span class="val" id="hizDeger">1.2</span>
+    </div>
+    <p class="note">Sesli anlatım açıkken uyarılar ekran okuyucuya ayrıca iletilmez, böylece iki ses üst üste binmez. Sesli anlatımı kapatırsanız uyarıları ekran okuyucunuz okur.</p>
+  </section>
+
+  <p class="note"><b>Bastonun yerine kullanmayın.</b> İki yapay zekâ birlikte çalışır. Nesne tanıma insan, araç, bisiklet, sandalye, köpek gibi yaklaşık 80 türü adıyla söyler. Derinlik modeli ne olduğunu bilmese de yakındaki direk, duvar, ağaç ve dal gibi engelleri "engel" olarak bildirir.</p>
+  <p class="note"><b>Çukur ve aşağı basamak uyarısı deneme aşamasındadır.</b> Büyük çukurları, kazı alanlarını, aşağı inen merdivenleri ve platform kenarlarını yaklaşık 2,5 ile 6 metre ileriden haber vermeye çalışır. Kamera ayağınızın hemen önünü göremez; en yakın 2 metreyi bastonunuzla kontrol edin. Sığ çukurlar, tek basamak, kaldırım kenarı ve içi su dolu çukurlar kaçabilir.</p>
+  <p class="note">Derinlik modeli ilk açılışta yaklaşık 25–50 MB indirir; Wi-Fi'de açmanız önerilir. Görüntü telefonunuzdan dışarı gönderilmez.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  const TRANSFORMERS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0";
+  const DERINLIK_MODELI = "onnx-community/depth-anything-v2-small";
+
+  // ---- Türkçe nesne adları (COCO sınıfları) ----
+  const AD = {
+    person: "insan", bicycle: "bisiklet", car: "araba", motorcycle: "motosiklet", airplane: "uçak", bus: "otobüs",
+    train: "tren", truck: "kamyon", boat: "tekne", "traffic light": "trafik ışığı", "fire hydrant": "yangın musluğu",
+    "stop sign": "dur tabelası", "parking meter": "park sayacı", bench: "bank", bird: "kuş", cat: "kedi", dog: "köpek",
+    horse: "at", sheep: "koyun", cow: "inek", backpack: "sırt çantası", umbrella: "şemsiye", handbag: "el çantası",
+    suitcase: "bavul", "sports ball": "top", skateboard: "kaykay", bottle: "şişe", cup: "fincan", chair: "sandalye",
+    couch: "kanepe", "potted plant": "saksı", bed: "yatak", "dining table": "masa", toilet: "klozet", tv: "televizyon",
+    laptop: "bilgisayar", "cell phone": "telefon", microwave: "mikrodalga", oven: "fırın", sink: "lavabo",
+    refrigerator: "buzdolabı", book: "kitap", clock: "saat", vase: "vazo"
+  };
+  const ARAC = new Set(["car", "bus", "truck", "motorcycle", "bicycle", "train"]);
+  const ENGEL = new Set(["person", "dog", "cat", "horse", "cow", "bench", "chair", "couch", "potted plant", "bed",
+    "dining table", "toilet", "suitcase", "fire hydrant", "parking meter", "stop sign", "traffic light",
+    "refrigerator", "tv", "sink", "oven", "umbrella", "skateboard", ...ARAC]);
+
+  // Nesne tanıma eşikleri: kutu yüksekliğinin görüntü yüksekliğine oranı
+  const ESIK = {
+    1: { dikkat: 0.42, tehlike: 0.68 },
+    2: { dikkat: 0.32, tehlike: 0.58 },
+    3: { dikkat: 0.24, tehlike: 0.48 }
+  };
+  // Derinlik eşikleri: bir sütundaki en yakın kısmın, kadrajın altındaki zemine oranı.
+  // Telefon göğüs hizasında dik tutulunca kadrajın altı yaklaşık 2 m ilerideki zemini görür;
+  // oran 1 civarı "zemin kadar yakın", büyüdükçe daha yakın demektir. İlk tahmin değerleridir, sahada ayarlanmalı.
+  const DESIK = {
+    1: { dikkat: 1.1, tehlike: 1.7 },
+    2: { dikkat: 0.92, tehlike: 1.45 },
+    3: { dikkat: 0.8, tehlike: 1.25 }
+  };
+  const DUVAR_YAYILIM = 0.22;   // kadrajın tamamı bu kadar düz ise önü kapatan bir yüzey var
+  const KARANLIK = 22;          // 0–255 ortalama parlaklık; altı "karanlık / kamera kapalı"
+  const SIRA = { yok: 0, dikkat: 1, tehlike: 2 };
+  const YONLER = ["sol", "on", "sag"];
+
+  // ---- Nesne tanıma adayı ----
+  function degerlendir(d, w, h, hassas) {
+    const [x, , bw, bh] = d.bbox;
+    if (!ENGEL.has(d.class)) return null;
+    const merkez = (x + bw / 2) / w;
+    const yon = merkez < 0.36 ? "sol" : merkez > 0.64 ? "sag" : "on";
+    let oran = bh / h;
+    if (ARAC.has(d.class)) oran *= 1.5;      // araçlar küçük görünse de tehlikelidir
+    const e = ESIK[hassas] || ESIK[2];
+    const seviye = oran >= e.tehlike ? "tehlike" : oran >= e.dikkat ? "dikkat" : "yok";
+    if (seviye === "yok") return null;
+    return { kaynak: "nesne", sinif: d.class, ad: AD[d.class] || d.class, yon, seviye, puan: oran, bbox: d.bbox };
+  }
+
+  // ---- Derinlik ölçümü (model çıktısı: büyük değer = yakın) ----
+  function yuzdelik(dizi, p) {
+    if (!dizi.length) return 0;
+    const s = Float32Array.from(dizi).sort();
+    return s[Math.min(s.length - 1, Math.max(0, Math.floor(p * (s.length - 1))))];
+  }
+  function bolge(data, w, h, x0, x1, y0, y1) {
+    const out = [];
+    const ya = Math.floor(y0 * h), yb = Math.min(h, Math.ceil(y1 * h));
+    const xa = Math.floor(x0 * w), xb = Math.min(w, Math.ceil(x1 * w));
+    for (let y = ya; y < yb; y += 1) for (let x = xa; x < xb; x += 1) out.push(data[y * w + x]);
+    return out;
+  }
+  // ---- Zemin: çukur ve aşağı inen basamak ----
+  // Düz bir zeminde ters derinlik (yakınlık), görüntüde ufuktan aşağı doğru düz bir çizgi gibi artar.
+  // Zeminin bir kısmı bu çizginin belirgin biçimde altında kalıyorsa (beklenenden uzaksa) orada çukur ya da aşağı inen kenar vardır.
+  const VFOV = 62 * Math.PI / 180;      // telefon kamerasının dikey görüş açısı (portre, yaklaşık)
+  const KAMERA_YUKSEKLIK = 1.3;         // göğüs hizası, metre
+  const ADIM = 0.7;                     // ortalama adım, metre
+  const ZESIK = { 1: 0.35, 2: 0.25, 3: 0.18 };   // beklenen zeminden ne kadar "uzak" görünürse çukur sayılır
+
+  // Kamera merceği (iğne deliği modeli): satır y, optik eksenden tan(açı) ile orantılı uzaklıktadır
+  const YARIM_TAN = Math.tan(VFOV / 2);
+  function ufukSatiri(beta) {           // görüntüde ufkun yeri (0 üst, 1 alt); eğim bilinmiyorsa null
+    if (beta == null) return null;
+    const asagi = (90 - beta) * Math.PI / 180;
+    if (Math.abs(asagi) > 1.2) return null;
+    return 0.5 - Math.tan(asagi) / (2 * YARIM_TAN);
+  }
+  function satirMesafe(y, yh) {         // satırdaki zeminin yatay uzaklığı (metre)
+    const egimAsagi = Math.atan((0.5 - yh) * 2 * YARIM_TAN);
+    const a = Math.atan((y - 0.5) * 2 * YARIM_TAN) + egimAsagi;
+    return a > 0.01 ? KAMERA_YUKSEKLIK / Math.tan(a) : Infinity;
+  }
+
+  function theilSen(noktalar) {         // aykırı noktalara dayanıklı doğru uydurma
+    const egimler = [];
+    for (let i = 0; i < noktalar.length; i += 1) for (let j = i + 1; j < noktalar.length; j += 1) {
+      const dx = noktalar[j][0] - noktalar[i][0];
+      if (Math.abs(dx) > 1e-6) egimler.push((noktalar[j][1] - noktalar[i][1]) / dx);
+    }
+    if (!egimler.length) return null;
+    const egim = yuzdelik(egimler, 0.5);
+    return { egim, kesisim: yuzdelik(noktalar.map((p) => p[1] - egim * p[0]), 0.5) };
+  }
+
+  function zeminOlc(data, w, h, beta) {
+    const BANT = 42;
+    let yh = ufukSatiri(beta);
+    const sensorlu = yh !== null;
+    const bantlar = [];
+    for (let i = 0; i < BANT; i += 1) {
+      const y0 = i / BANT, y1 = (i + 1) / BANT, yc = (y0 + y1) / 2;
+      if (sensorlu) { const m = satirMesafe(yc, yh); if (!(m <= 7 && m >= 0.4)) continue; }
+      else if (yc < 0.56) continue;
+      // %35'lik değer: sütunun en az üçte birini kaplayan bir çukur bu değeri aşağı çeker
+      bantlar.push({ yc, y0, y1, deg: [0, 1, 2].map((c) => yuzdelik(bolge(data, w, h, c / 3, (c + 1) / 3, y0, y1), 0.35)) });
+    }
+    if (bantlar.length < 8) return null;
+    // Beklenen zemin doğrusu, kullanıcının hemen önündeki en yakın zeminden uydurulur.
+    // Sensör yürürken birkaç derece yanılabildiği için doğru sensörden değil görüntünün kendisinden çıkarılır;
+    // sensör yalnızca hangi satırların zemin olduğunu ve uzaklıkları belirler.
+    const nok = [];
+    bantlar.slice(Math.floor(bantlar.length * 0.6)).forEach((b) => b.deg.forEach((v) => nok.push([b.yc, v])));
+    const f = theilSen(nok);
+    if (!f || !(f.egim > 0)) return null;
+    const beklenen = (y) => f.egim * y + f.kesisim;
+    // Düz zeminin doğrusu ufukta sıfıra iner: ufku görüntüden de bulabiliriz.
+    // Sensörle en fazla ~10° farklıysa uzaklık hesabında görüntüdeki ufuk kullanılır (sensör yürürken titrer).
+    const yhVeri = -f.kesisim / f.egim;
+    const izin = Math.tan((10 * Math.PI) / 180) / (2 * YARIM_TAN);
+    if (!sensorlu) yh = Math.min(0.75, Math.max(0.2, yhVeri));
+    else if (Math.abs(yhVeri - yh) < izin) yh = yhVeri;
+    else if (Math.abs(yhVeri - yh) > 2 * izin) return null;   // sensör ile görüntü çelişiyor: karar verme
+    const satirlar = bantlar.map((b) => {
+      const e = beklenen(b.yc);
+      return { y0: b.y0, y1: b.y1, mesafe: satirMesafe(b.yc, yh), r: b.deg.map((v) => (e > 0 ? v / e : 1)) };
+    });
+    // Önümüzdeki zemin gerçekten düz bir zemine benziyor mu? Benzemiyorsa (duvar, kalabalık) karar verme
+    let uyan = 0, toplam = 0;
+    satirlar.slice(Math.floor((satirlar.length * 2) / 3)).forEach((s) => s.r.forEach((x) => { toplam += 1; if (Math.abs(x - 1) < 0.25) uyan += 1; }));
+    if (!toplam || uyan / toplam < 0.6) return null;
+    return { satirlar, altBeklenen: beklenen(0.94), sensorlu };
+  }
+
+  // durumBilgi: { karanlik, yukariBakiyor }
+  function zeminAdaylar(z, hassas, durumBilgi) {
+    const bilgi = durumBilgi || {};
+    if (!z || bilgi.karanlik || bilgi.yukariBakiyor) return [];
+    const T = ZESIK[hassas] || ZESIK[2];
+    const sutun = [0, 1, 2].map((c) => {
+      let run = [], bulunan = null;
+      const bitir = () => {
+        if (run.length >= 2) bulunan = { yakin: Math.min(...run.map((s) => s.mesafe)), y0: run[0].y0, y1: run[run.length - 1].y1 };
+        run = [];
+      };
+      z.satirlar.forEach((s) => { if (s.r[c] < 1 - T && s.mesafe <= 6.5) run.push(s); else bitir(); });
+      bitir();
+      return bulunan;                      // uzaktan yakına tarandığı için sonuncusu en yakın olandır
+    });
+    const sayi = sutun.filter(Boolean).length;
+    if (!sayi) return [];
+    // Eğim sensörü yoksa uzaklık güvenilmez: adım sayısı söylenmez, uyarı "dikkat" seviyesinde kalır
+    const aday = (yon, b, sinif, ad) => ({
+      kaynak: "zemin", sinif, ad, yon, seviye: z.sensorlu && b.yakin <= 3.5 ? "tehlike" : "dikkat",
+      puan: 10 - b.yakin, mesafe: z.sensorlu ? b.yakin : 3, adim: z.sensorlu ? Math.max(1, Math.round(b.yakin / ADIM)) : null,
+      y0: b.y0, y1: b.y1
+    });
+    if (sayi === 3) {
+      const b = sutun.reduce((a, x) => (x.yakin < a.yakin ? x : a));
+      return [Object.assign(aday("on", b, "kenar", "aşağı inen basamak ya da kenar"), { genis: true })];
+    }
+    const out = [];
+    sutun.forEach((b, i) => {
+      if (!b) return;
+      const a = aday(YONLER[i], b, "cukur", "çukur");
+      if (i === 1) { const sol = !sutun[0], sag = !sutun[2]; a.acik = sol && sag ? "iki" : sol ? "sol" : sag ? "sag" : null; }
+      out.push(a);
+    });
+    return out;
+  }
+
+  function derinlikOlc(data, w, h, beta) {
+    const genel = bolge(data, w, h, 0, 1, 0, 1);
+    const p5 = yuzdelik(genel, 0.05), p95 = yuzdelik(genel, 0.95);
+    const zeminBilgi = zeminOlc(data, w, h, beta === undefined ? null : beta);
+    let zemin = zeminBilgi ? zeminBilgi.altBeklenen : yuzdelik(bolge(data, w, h, 0.3, 0.7, 0.88, 1), 0.5);
+    if (!(zemin > 0)) zemin = yuzdelik(bolge(data, w, h, 0.3, 0.7, 0.88, 1), 0.5);
+    if (!(zemin > 0)) zemin = yuzdelik(genel, 0.5) || 1;
+    // Baş ve göğüs hizası bandı: kadrajın üstten %10–%60'ı (zemin bu bantta uzak kalır)
+    const oranlar = [0, 1, 2].map((i) => yuzdelik(bolge(data, w, h, i / 3, (i + 1) / 3, 0.1, 0.6), 0.85) / zemin);
+    const yayilim = p95 > 0 ? (p95 - p5) / p95 : 1;
+    return { oranlar, yayilim, zemin: zeminBilgi };
+  }
+  // durumBilgi: { yereBakiyor: bool, karanlik: bool }
+  function derinlikAdaylar(olcum, hassas, durumBilgi) {
+    if (!olcum) return [];
+    const bilgi = durumBilgi || {};
+    if (bilgi.karanlik || bilgi.yereBakiyor) return [];      // bu durumlarda derinlik ölçümü güvenilmez
+    if (olcum.yayilim < DUVAR_YAYILIM) {
+      return [{ kaynak: "derinlik", sinif: "duvar", ad: "duvar ya da büyük bir engel", yon: "on", seviye: "tehlike", puan: 3 }];
+    }
+    const e = DESIK[hassas] || DESIK[2];
+    const out = [];
+    olcum.oranlar.forEach((o, i) => {
+      const seviye = o >= e.tehlike ? "tehlike" : o >= e.dikkat ? "dikkat" : "yok";
+      if (seviye !== "yok") out.push({ kaynak: "derinlik", sinif: "engel", ad: "engel", yon: YONLER[i], seviye, puan: o });
+    });
+    return out;
+  }
+
+  // ---- İki kaynağı birleştir: aynı yönde nesne adı varsa onu kullan, seviyeyi yüksek olandan al ----
+  // Çukur uyarıları birleştirilmez; aynı seviyede her zaman engellerden önce gelir (düşmek çarpmaktan tehlikelidir)
+  function birlestir(nesne, derin) {
+    const tum = nesne.map((n) => Object.assign({}, n));
+    for (const d of derin) {
+      if (d.kaynak === "zemin") { tum.push(Object.assign({}, d)); continue; }
+      const ayni = tum.find((n) => n.kaynak === "nesne" && n.yon === d.yon);
+      if (ayni) { if (SIRA[d.seviye] > SIRA[ayni.seviye]) ayni.seviye = d.seviye; }
+      else tum.push(Object.assign({}, d));
+    }
+    // Çukurun yanında "açık" denen tarafta engel varsa o tarafı açık sayma
+    const engelYon = new Set(tum.filter((t) => t.kaynak !== "zemin").map((t) => t.yon));
+    for (const t of tum) {
+      if (t.kaynak !== "zemin" || !t.acik) continue;
+      const sol = (t.acik === "sol" || t.acik === "iki") && !engelYon.has("sol");
+      const sag = (t.acik === "sag" || t.acik === "iki") && !engelYon.has("sag");
+      t.acik = sol && sag ? "iki" : sol ? "sol" : sag ? "sag" : null;
+    }
+    tum.sort((a, b) =>
+      (SIRA[b.seviye] - SIRA[a.seviye]) ||
+      ((b.kaynak === "zemin") - (a.kaynak === "zemin")) ||
+      ((b.yon === "on") - (a.yon === "on")) ||
+      (b.puan - a.puan));
+    return tum;
+  }
+
+  function cumle(t) {
+    const yer = t.yon === "sol" ? "Solunda" : t.yon === "sag" ? "Sağında" : "Önünde";
+    if (t.kaynak === "zemin") {
+      const ek = t.acik === "sol" ? " Sol taraf açık görünüyor." : t.acik === "sag" ? " Sağ taraf açık görünüyor." : t.acik === "iki" ? " İki yan da açık görünüyor." : "";
+      const uzaklik = t.adim ? `yaklaşık ${t.adim} adım ileride` : "ileride";
+      return t.seviye === "tehlike"
+        ? `Dur! ${yer} ${uzaklik} ${t.ad}.${ek}`
+        : `Dikkat, ${yer.toLocaleLowerCase("tr")} ${uzaklik} ${t.ad}.${ek}`;
+    }
+    const mesafe = t.seviye === "tehlike" ? "çok yakın" : "yakın";
+    const bas = t.seviye === "tehlike" ? "Dikkat! " : "";
+    return `${bas}${yer} ${mesafe} ${t.ad}.`;
+  }
+
+  // Telefonun eğimi (portrede beta: dik ≈ 90, ekran yukarı yatay ≈ 0)
+  function egimDurumu(beta, gamma) {
+    if (beta == null || gamma == null) return "bilinmiyor";
+    if (Math.abs(gamma) > 60) return "yatay";          // telefon yan çevrilmiş, değerlendirme yapma
+    if (beta < 50) return "asagi";
+    if (beta > 130) return "yukari";
+    return "dik";
+  }
+
+  // Bekleyen derinlik sonucu ne kadar eskiyse kullanılabilir (yavaş telefonlarda da çalışsın)
+  function derinlikTazeMi(yas, sureMs) { return yas < Math.max(2000, 2.5 * (sureMs || 0)); }
+
+  if (typeof module !== "undefined") {
+    module.exports = { degerlendir, derinlikOlc, derinlikAdaylar, zeminAdaylar, birlestir, cumle, egimDurumu, derinlikTazeMi };
+    return;
+  }
+
+  // ================= Sayfa =================
+  const $ = (id) => document.getElementById(id);
+  const video = $("video"), katman = $("katman"), ctx = katman.getContext("2d");
+  const durum = $("durum"), btn = $("baslat"), uyari = $("uyari");
+  const derinTuval = document.createElement("canvas"), derinCtx = derinTuval.getContext("2d", { willReadFrequently: true });
+  const isikTuval = document.createElement("canvas"); isikTuval.width = 32; isikTuval.height = 24;
+  const isikCtx = isikTuval.getContext("2d", { willReadFrequently: true });
+
+  const ayar = { konus: true, bip: true, titresim: true, derinlik: true, cukur: true, hassas: 2, hiz: 1.2 };
+  try { Object.assign(ayar, JSON.parse(localStorage.getItem("pusula.canli") || "{}")); } catch (e) {}
+  $("konus").checked = ayar.konus; $("bip").checked = ayar.bip; $("titresim").checked = ayar.titresim;
+  $("derinlik").checked = ayar.derinlik; $("cukur").checked = ayar.cukur; $("hassas").value = ayar.hassas; $("hiz").value = ayar.hiz;
+  $("cukur").onchange = (e) => { ayar.cukur = e.target.checked; ayarYaz(); };
+  const HASSAS_AD = { 1: "Düşük", 2: "Orta", 3: "Yüksek" };
+  function ayarYaz() {
+    $("hassasDeger").textContent = HASSAS_AD[ayar.hassas];
+    $("hassas").setAttribute("aria-valuetext", HASSAS_AD[ayar.hassas]);
+    $("hizDeger").textContent = Number(ayar.hiz).toFixed(1);
+    durum.setAttribute("aria-live", ayar.konus ? "off" : "assertive");
+    try { localStorage.setItem("pusula.canli", JSON.stringify(ayar)); } catch (e) {}
+  }
+  ayarYaz();
+  $("konus").onchange = (e) => { ayar.konus = e.target.checked; if (!ayar.konus) sus(); ayarYaz(); };
+  $("bip").onchange = (e) => { ayar.bip = e.target.checked; ayarYaz(); };
+  $("titresim").onchange = (e) => { ayar.titresim = e.target.checked; ayarYaz(); };
+  $("derinlik").onchange = (e) => {
+    ayar.derinlik = e.target.checked; ayarYaz();
+    if (ayar.derinlik) { if (derinlik.durum === "hata") derinlik.durum = "kapali"; if (calisiyor) derinlikBaslat(); }
+    else { derinlik.olcum = null; derinYaz(derinlik.durum === "hazir" ? "Kapalı (hazır)" : "Kapalı"); }
+  };
+  $("hassas").oninput = (e) => { ayar.hassas = Number(e.target.value); ayarYaz(); };
+  $("hiz").oninput = (e) => { ayar.hiz = Number(e.target.value); ayarYaz(); };
+
+  function uyar(m) { uyari.textContent = m; uyari.hidden = !m; }
+  function nesneYaz(m) { $("nesneDurum").textContent = m; }
+  function derinYaz(m) { $("derinDurum").textContent = m; }
+
+  // ---- Konuşma ----
+  let trSes = null, sesKontrolEdildi = false;
+  function sesSec() { try { trSes = speechSynthesis.getVoices().find((v) => /^tr/i.test(v.lang)) || null; } catch (e) {} }
+  if ("speechSynthesis" in window) { sesSec(); speechSynthesis.onvoiceschanged = sesSec; }
+  // Söylediyse true döner. kes=true: konuşmayı kesip hemen söyle (tehlike).
+  function soyle(m, kes) {
+    if (!ayar.konus || !("speechSynthesis" in window)) return false;
+    try {
+      if (!kes && (speechSynthesis.speaking || speechSynthesis.pending)) return false;
+      if (kes) speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(m); u.lang = "tr-TR"; u.rate = ayar.hiz; if (trSes) u.voice = trSes;
+      speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  }
+  function sus() { try { speechSynthesis.cancel(); } catch (e) {} }
+  function sesUyarisi() {
+    if (sesKontrolEdildi || !ayar.konus) return;
+    sesKontrolEdildi = true;
+    setTimeout(() => {
+      sesSec();
+      if (!("speechSynthesis" in window)) uyar("Bu tarayıcı sesli okumayı desteklemiyor. Sesli anlatımı kapatıp ekran okuyucunuzla kullanabilirsiniz.");
+      else if (!trSes && speechSynthesis.getVoices().length) uyar("Telefonunuzda Türkçe okuma sesi bulunamadı. Telefon ayarlarında metin okuma bölümünden Türkçe sesi indirin.");
+    }, 1500);
+  }
+
+  // ---- Bip: park sensörü gibi; yakınlaştıkça sıklaşır, ses engelin tarafından gelir ----
+  let ses = null, bipZaman = null;
+  const anlik = { seviye: "yok", yon: "on", tur: "engel" };
+  // Çukur sesi: engel bipinden ayırt edilsin diye yüksekten alçağa kayan bir ses
+  function zeminSesi() {
+    if (!ses || !ayar.bip || document.hidden) return;
+    try {
+      const t = ses.currentTime + 0.01;
+      const o = ses.createOscillator(), g = ses.createGain();
+      const p = ses.createStereoPanner ? ses.createStereoPanner() : null;
+      o.type = "triangle";
+      o.frequency.setValueAtTime(780, t); o.frequency.exponentialRampToValueAtTime(240, t + 0.3);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
+      if (p) { p.pan.value = anlik.yon === "sol" ? -1 : anlik.yon === "sag" ? 1 : 0; o.connect(g).connect(p).connect(ses.destination); }
+      else o.connect(g).connect(ses.destination);
+      o.start(t); o.stop(t + 0.34);
+    } catch (e) {}
+  }
+  function bipCal() {
+    if (!ses || !ayar.bip || document.hidden) return;
+    try {
+      const t = ses.currentTime + 0.01;
+      const o = ses.createOscillator(), g = ses.createGain();
+      const p = ses.createStereoPanner ? ses.createStereoPanner() : null;
+      o.type = "sine"; o.frequency.value = anlik.seviye === "tehlike" ? 880 : 620;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      if (p) { p.pan.value = anlik.yon === "sol" ? -1 : anlik.yon === "sag" ? 1 : 0; o.connect(g).connect(p).connect(ses.destination); }
+      else o.connect(g).connect(ses.destination);
+      o.start(t); o.stop(t + 0.1);
+    } catch (e) {}
+  }
+  function bipDongu() {
+    clearTimeout(bipZaman);
+    if (!calisiyor) return;
+    let sonraki = 250;
+    if (anlik.tur === "zemin" && anlik.seviye !== "yok") { zeminSesi(); sonraki = anlik.seviye === "tehlike" ? 450 : 900; }
+    else if (anlik.seviye === "tehlike") { bipCal(); sonraki = 170; }
+    else if (anlik.seviye === "dikkat") { bipCal(); sonraki = 520; }
+    bipZaman = setTimeout(bipDongu, sonraki);
+  }
+
+  function titret(seviye, yon, tur) {
+    if (!ayar.titresim || !navigator.vibrate) return;
+    try {
+      if (tur === "zemin") navigator.vibrate(seviye === "tehlike" ? [900, 120, 900] : [600]);
+      else if (seviye === "tehlike") navigator.vibrate([350, 80, 350]);
+      else navigator.vibrate({ sol: [90], on: [90, 70, 90], sag: [90, 70, 90, 70, 90] }[yon] || [90]);
+    } catch (e) {}
+  }
+
+  function yonCiz(yon, seviye) {
+    document.querySelectorAll(".dir span").forEach((s) => {
+      s.classList.toggle("dikkat", s.dataset.yon === yon && seviye === "dikkat");
+      s.classList.toggle("tehlike", s.dataset.yon === yon && seviye === "tehlike");
+    });
+  }
+
+  // ---- Telefon eğimi ----
+  const egim = { beta: null, gamma: null, durum: "bilinmiyor", sonUyari: 0, ne_zamandan: 0 };
+  function egimDinle(e) {
+    // Sensörü olmayan cihazlar boş (null) bir olay gönderir; bilinen değerin üzerine yazmasın
+    if (e.beta == null || e.gamma == null) return;
+    egim.beta = e.beta; egim.gamma = e.gamma;
+    const yeni = egimDurumu(e.beta, e.gamma);
+    if (yeni !== egim.durum) { egim.durum = yeni; egim.ne_zamandan = Date.now(); }
+  }
+  async function egimIzniIste() {
+    try {
+      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+        const sonuc = await DeviceOrientationEvent.requestPermission();
+        if (sonuc !== "granted") return;
+      }
+      window.addEventListener("deviceorientation", egimDinle);
+    } catch (e) {}
+  }
+  function egimKontrol(simdi) {
+    if (egim.durum !== "asagi" && egim.durum !== "yukari") return false;
+    if (simdi - egim.ne_zamandan < 2000 || simdi - egim.sonUyari < 8000) return true;
+    egim.sonUyari = simdi;
+    yolAcikSoylenecek = true; sonUyariZamani = simdi;   // telefon düzelince "Yol açık" denilsin
+    const m = egim.durum === "asagi" ? "Telefonu biraz kaldırın, kamera yere bakıyor." : "Telefonu biraz indirin, kamera yukarı bakıyor.";
+    durumGoster(m, "");
+    soyle(m, false);
+    return true;
+  }
+
+  // ---- Parlaklık: karanlık ya da kamerası kapalı mı ----
+  const isik = { karanlik: false, sonOlcum: 0, sonUyari: 0 };
+  function parlaklikOlc(simdi) {
+    if (simdi - isik.sonOlcum < 1000 || video.readyState < 2) return;
+    isik.sonOlcum = simdi;
+    try {
+      isikCtx.drawImage(video, 0, 0, 32, 24);
+      const d = isikCtx.getImageData(0, 0, 32, 24).data;
+      let top = 0;
+      for (let i = 0; i < d.length; i += 4) top += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      isik.karanlik = top / (d.length / 4) < KARANLIK;
+    } catch (e) { isik.karanlik = false; }
+  }
+
+  // ---- Gören test edenler için ekran çizimi ----
+  function ciz(tespitler, derinAday, hedef) {
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw) return;
+    if (katman.width !== vw || katman.height !== vh) { katman.width = vw; katman.height = vh; }
+    ctx.clearRect(0, 0, vw, vh);
+    for (const d of derinAday) {
+      const i = YONLER.indexOf(d.yon);
+      if (d.kaynak === "zemin") {
+        // Çukur: mavi tarama, yalnızca çukurun göründüğü satırlarda
+        ctx.fillStyle = d.seviye === "tehlike" ? "rgba(90,170,255,0.5)" : "rgba(90,170,255,0.32)";
+        const y0 = (d.y0 || 0) * vh, yy = Math.max(6, ((d.y1 || 1) - (d.y0 || 0)) * vh);
+        if (d.genis) ctx.fillRect(0, y0, vw, vh - y0); else ctx.fillRect((i * vw) / 3, y0, vw / 3, yy);
+        continue;
+      }
+      ctx.fillStyle = d.seviye === "tehlike" ? "rgba(255,107,94,0.28)" : "rgba(255,210,63,0.22)";
+      if (d.sinif === "duvar") ctx.fillRect(0, 0, vw, vh);
+      else ctx.fillRect((i * vw) / 3, 0.1 * vh, vw / 3, 0.5 * vh);
+    }
+    ctx.lineWidth = Math.max(3, vw / 200);
+    ctx.font = `700 ${Math.max(18, vw / 30)}px "Atkinson Hyperlegible", sans-serif`;
+    for (const d of tespitler) {
+      const [x, y, w, h] = d.bbox;
+      const ana = hedef && hedef.bbox === d.bbox;
+      const renk = ana ? (hedef.seviye === "tehlike" ? "#FF6B5E" : "#FFD23F") : "rgba(255,255,255,0.55)";
+      ctx.strokeStyle = renk; ctx.strokeRect(x, y, w, h);
+      const etiket = AD[d.class] || d.class;
+      const tw = ctx.measureText(etiket).width + 12;
+      ctx.fillStyle = renk; ctx.fillRect(x, Math.max(0, y - 30), tw, 30);
+      ctx.fillStyle = "#0B0F14"; ctx.fillText(etiket, x + 6, Math.max(22, y - 8));
+    }
+  }
+
+  function durumGoster(m, seviye) { durum.textContent = m; durum.dataset.level = seviye || ""; }
+
+  // ---- Derinlik modeli ----
+  const derinlik = { durum: "kapali", tjs: null, pipe: null, ip: null, cihaz: "", olcum: null, zaman: 0, ms: 0, donuyor: false };
+
+  function tuvalHazirla() {
+    const vw = video.videoWidth || 960, vh = video.videoHeight || 1280, uzun = 252;
+    let cw, ch;
+    if (vh >= vw) { ch = uzun; cw = Math.max(112, Math.round((uzun * vw) / vh / 14) * 14); }
+    else { cw = uzun; ch = Math.max(112, Math.round((uzun * vh) / vw / 14) * 14); }
+    if (derinTuval.width !== cw || derinTuval.height !== ch) { derinTuval.width = cw; derinTuval.height = ch; }
+    if (derinlik.ip) derinlik.ip.size = { width: cw, height: ch };
+    if (video.readyState >= 2) derinCtx.drawImage(video, 0, 0, cw, ch);
+    else { derinCtx.fillStyle = "#777"; derinCtx.fillRect(0, 0, cw, ch); }
+  }
+
+  // İşlemciyi ve modeli doğrudan çağırır: ara adımlar atlanır, fp16 çıktısı da güvenle float32'ye çevrilir
+  async function derinlikCalistir() {
+    tuvalHazirla();
+    const img = derinlik.tjs.RawImage.fromCanvas(derinTuval);
+    const t0 = performance.now();
+    const girdi = await derinlik.pipe.processor(img);
+    const cikti = await derinlik.pipe.model(girdi);
+    let t = cikti.predicted_depth;
+    if (t.type !== "float32") t = t.to("float32");
+    const [h, w] = t.dims.slice(-2);
+    // Eğim yalnızca telefon dik (portre) tutulurken anlamlı; yan çevrilmiş ya da bilinmiyorsa verilmez
+    const beta = egim.beta != null && egim.durum !== "yatay" ? egim.beta : null;
+    const olcum = derinlikOlc(t.data, w, h, beta);
+    derinlik.ms = performance.now() - t0;
+    return olcum;
+  }
+
+  async function derinlikYukle() {
+    if (derinlik.durum === "hazir" || derinlik.durum === "yukleniyor") return;
+    derinlik.durum = "yukleniyor"; derinYaz("İndiriliyor…");
+    try {
+      const tjs = await import(TRANSFORMERS_URL);
+      tjs.env.allowLocalModels = false;
+      derinlik.tjs = tjs;
+      const ilerleme = (p) => {
+        if (p && p.status === "progress" && p.total > 5e6 && isFinite(p.progress)) derinYaz(`İndiriliyor %${Math.round(p.progress)}`);
+      };
+      const denemeler = [];
+      if (navigator.gpu) denemeler.push({ device: "webgpu", dtype: "fp16" });
+      denemeler.push({ device: "wasm", dtype: "q8" }, { device: "wasm", dtype: "fp32" });
+      for (const d of denemeler) {
+        try {
+          derinYaz(d.device === "webgpu" ? "Hazırlanıyor (GPU)…" : "Hazırlanıyor…");
+          const pipe = await tjs.pipeline("depth-estimation", DERINLIK_MODELI, { device: d.device, dtype: d.dtype, progress_callback: ilerleme });
+          derinlik.pipe = pipe;
+          derinlik.ip = (pipe.processor && pipe.processor.image_processor) || pipe.processor;
+          derinlik.cihaz = d.device;
+          await derinlikCalistir();           // deneme çalıştırması: hata varsa sonraki seçeneğe geç
+          break;
+        } catch (e) {
+          console.warn("Derinlik modeli", d, e);
+          try { if (derinlik.pipe && derinlik.pipe.dispose) await derinlik.pipe.dispose(); } catch (x) {}
+          derinlik.pipe = null;
+        }
+      }
+      if (!derinlik.pipe) throw new Error("Derinlik modeli çalıştırılamadı");
+      derinlik.durum = "hazir";
+      derinYaz(derinlik.cihaz === "webgpu" ? "Hazır (GPU)" : "Hazır");
+      if (calisiyor) soyle("Derinlik modeli hazır.", false);
+    } catch (e) {
+      console.warn(e);
+      derinlik.durum = "hata";
+      derinYaz("Yüklenemedi");
+      uyar("Derinlik modeli yüklenemedi. Yalnızca nesne tanıma çalışıyor. Yeniden denemek için Derinlik modeli ayarını kapatıp açın.");
+    }
+  }
+
+  async function derinlikDongu() {
+    if (derinlik.donuyor) return;
+    derinlik.donuyor = true;
+    try {
+      while (calisiyor && ayar.derinlik && derinlik.durum === "hazir") {
+        try {
+          if (video.readyState >= 2 && !document.hidden) {
+            derinlik.olcum = await derinlikCalistir();
+            derinlik.zaman = Date.now();
+            derinYaz(`${derinlik.cihaz === "webgpu" ? "GPU" : "İşlemci"} · ${Math.round(derinlik.ms)} ms`);
+          }
+        } catch (e) { console.warn(e); }
+        await new Promise((r) => setTimeout(r, 120));   // telefonu soğutmak için kısa mola
+      }
+    } finally { derinlik.donuyor = false; }
+  }
+
+  async function derinlikBaslat() {
+    await derinlikYukle();
+    if (calisiyor && ayar.derinlik) derinlikDongu();
+  }
+
+  // ---- Ana tarama döngüsü ----
+  let model = null, akis = null, calisiyor = false, kilit = null, taraZaman = null;
+  let gorulme = new Map();
+  let sonAnahtar = "", sonAdim = null, sonSoylenmeZamani = 0, sonUyariZamani = 0, yolAcikSoylenecek = false;
+  let oncekiSeviye = "yok", oncekiTur = "engel", yolAcikGecikme = 2500;
+  let zeminHafiza = null;   // son görülen çukur: görüş alanından çıkınca "çok yakında olabilir" demek için
+
+  async function tara() {
+    if (!calisiyor) return;
+    const bas = performance.now();
+    try {
+      if (video.readyState >= 2 && !document.hidden) {
+        const simdi = Date.now();
+        parlaklikOlc(simdi);
+        const tespitler = await model.detect(video, 8, 0.5);
+        if (!calisiyor) return;
+        const w = video.videoWidth, h = video.videoHeight;
+        const nesneAday = tespitler.map((d) => degerlendir(d, w, h, ayar.hassas)).filter(Boolean);
+        const yereBakiyor = egim.durum === "asagi";
+        const taze = ayar.derinlik && derinlik.olcum && derinlikTazeMi(simdi - derinlik.zaman, derinlik.ms);
+        const engelAday = taze ? derinlikAdaylar(derinlik.olcum, ayar.hassas, { karanlik: isik.karanlik, yereBakiyor }) : [];
+        const zeminAday = taze && ayar.cukur
+          ? zeminAdaylar(derinlik.olcum.zemin, ayar.hassas, { karanlik: isik.karanlik, yukariBakiyor: egim.durum === "yukari" })
+          : [];
+        const derinAday = engelAday.concat(zeminAday);
+        const adaylar = birlestir(nesneAday, derinAday);
+
+        // Titrek uyarıları ele: aynı uyarı en az 2 karede görülmeli (tehlike hariç)
+        const yeni = new Map();
+        for (const a of adaylar) { const k = a.sinif + "|" + a.yon; yeni.set(k, (gorulme.get(k) || 0) + 1); }
+        gorulme = yeni;
+        const hedef = adaylar.find((a) => (gorulme.get(a.sinif + "|" + a.yon) || 0) >= 2 || a.seviye === "tehlike") || null;
+
+        ciz(tespitler, derinAday, hedef);
+        if (hedef) {
+          const zeminMi = hedef.kaynak === "zemin";
+          const tur = zeminMi ? "zemin" : "engel";
+          anlik.seviye = hedef.seviye; anlik.yon = hedef.yon; anlik.tur = tur;
+          yonCiz(hedef.yon, hedef.seviye);
+          const m = cumle(hedef);
+          if ((hedef.seviye === "tehlike" && oncekiSeviye !== "tehlike") || oncekiSeviye === "yok" || tur !== oncekiTur) titret(hedef.seviye, hedef.yon, tur);
+          // Aynı uyarı (tür + yön + seviye) tekrar tekrar söylenmez; çukur yaklaştıkça adım sayısı güncellenir
+          const anahtar = hedef.sinif + "|" + hedef.yon + "|" + hedef.seviye;
+          const yaklasti = zeminMi && anahtar === sonAnahtar && hedef.adim != null && sonAdim != null && hedef.adim < sonAdim;
+          const tekrarSuresi = zeminMi ? (hedef.seviye === "tehlike" ? 2500 : 5000) : (hedef.seviye === "tehlike" ? 3000 : 6000);
+          if (anahtar !== sonAnahtar || yaklasti || simdi - sonSoylenmeZamani > tekrarSuresi) {
+            durumGoster(m, hedef.seviye);
+            // Konuşma kapalıysa ya da söylenebildiyse "söylendi" say; meşgulse sonraki karede yeniden dener
+            if (!ayar.konus || soyle(m, hedef.seviye === "tehlike" || zeminMi)) { sonAnahtar = anahtar; sonAdim = hedef.adim; sonSoylenmeZamani = simdi; }
+          }
+          if (zeminMi) { zeminHafiza = { zaman: simdi, mesafe: hedef.mesafe, sinif: hedef.sinif, soylendi: false }; yolAcikGecikme = 6000; }
+          sonUyariZamani = simdi; yolAcikSoylenecek = true; oncekiSeviye = hedef.seviye; oncekiTur = tur;
+        } else {
+          anlik.seviye = "yok"; oncekiSeviye = "yok";
+          yonCiz(null, null);
+          // Çukur az önce yakındaydı ve artık görünmüyorsa: kameranın göremediği ayak önüne girmiş olabilir
+          const gecen = zeminHafiza ? simdi - zeminHafiza.zaman : Infinity;
+          if (zeminHafiza && !zeminHafiza.soylendi && gecen > 600 && gecen < 5000 && zeminHafiza.mesafe <= 3.8) {
+            const m = (zeminHafiza.sinif === "kenar" ? "Basamak ya da kenar" : "Çukur") + " artık görünmüyor, çok yakında olabilir. Bastonla kontrol et.";
+            durumGoster(m, "dikkat");
+            if (!ayar.konus || soyle(m, true)) zeminHafiza.soylendi = true;
+            sonUyariZamani = simdi; yolAcikSoylenecek = true; yolAcikGecikme = 6000; sonAnahtar = "";
+            taraZaman = setTimeout(tara, 250); return;
+          }
+          const egimUyarisi = egimKontrol(simdi);
+          if (!egimUyarisi && isik.karanlik && simdi - isik.sonUyari > 10000) {
+            isik.sonUyari = simdi; yolAcikSoylenecek = true; sonUyariZamani = simdi;
+            durumGoster("Görüntü çok karanlık. Kameranın önü kapalı olabilir.", "");
+            soyle("Görüntü çok karanlık. Kameranın önü kapalı olabilir.", false);
+          } else if (!egimUyarisi && !isik.karanlik && yolAcikSoylenecek && simdi - sonUyariZamani > yolAcikGecikme) {
+            durumGoster("Yol açık.", "");
+            if (!ayar.konus || soyle("Yol açık.", false)) { yolAcikSoylenecek = false; yolAcikGecikme = 2500; sonAnahtar = ""; sonSoylenmeZamani = simdi; }
+          }
+        }
+      }
+    } catch (e) { console.warn(e); }
+    if (!calisiyor) return;
+    const gecen = performance.now() - bas;
+    taraZaman = setTimeout(tara, Math.max(0, 250 - gecen));   // saniyede yaklaşık 4 tarama
+  }
+
+  async function baslat() {
+    uyar("");
+    // Eğim izni (iPhone) dokunuşun içinde, ilk beklemeden önce istenmeli
+    const egimIzni = egimIzniIste();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      uyar("Kamera açılamıyor. Bu sayfa güvenli bir adresten (https ile başlayan) açılmalı."); return;
+    }
+    if (typeof cocoSsd === "undefined" || typeof tf === "undefined") {
+      uyar("Yapay zekâ kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin."); return;
+    }
+    btn.disabled = true;
+    try { if (!ses) ses = new (window.AudioContext || window.webkitAudioContext)(); await ses.resume(); } catch (e) { ses = null; }
+    try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+    sesUyarisi();
+    await egimIzni;
+
+    durumGoster("Kamera açılıyor…", "");
+    try {
+      akis = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } } });
+    } catch (e) {
+      btn.disabled = false;
+      uyar(e && e.name === "NotAllowedError" ? "Kamera izni verilmedi. Tarayıcı ayarlarından bu siteye kamera izni verin." : "Kamera açılamadı.");
+      durumGoster("Hazır.", ""); return;
+    }
+    akis.getVideoTracks().forEach((t) => { t.onended = () => { if (calisiyor) { dur(); uyar("Kamera kapandı. Yeniden başlatmak için Başlat'a basın."); } }; });
+    video.srcObject = akis; await video.play().catch(() => {});
+    $("bos").hidden = true;
+
+    if (!model) {
+      durumGoster("Yapay zekâ yükleniyor…", ""); nesneYaz("Yükleniyor…"); soyle("Yapay zekâ yükleniyor.", true);
+      try { model = await cocoSsd.load({ base: "lite_mobilenet_v2" }); }
+      catch (e) {
+        console.warn(e); btn.disabled = false; nesneYaz("Yüklenemedi");
+        kameraKapat(); $("bos").hidden = false; durumGoster("Hazır.", "");
+        uyar("Nesne tanıma modeli indirilemedi. İnternet bağlantınızı kontrol edip yeniden deneyin.");
+        soyle("Yapay zekâ indirilemedi.", true); return;
+      }
+    }
+    nesneYaz("Çalışıyor");
+    try { if ("wakeLock" in navigator) kilit = await navigator.wakeLock.request("screen"); } catch (e) {}
+
+    calisiyor = true; btn.disabled = false; btn.textContent = "Durdur"; btn.classList.add("calisiyor");
+    durumGoster("Taranıyor. Yol açık.", "");
+    soyle(ayar.derinlik && derinlik.durum !== "hazir" ? "Pusula çalışıyor. Derinlik modeli hazırlanıyor." : "Pusula çalışıyor.", true);
+    sonAnahtar = ""; sonAdim = null; yolAcikSoylenecek = false; yolAcikGecikme = 2500; zeminHafiza = null;
+    oncekiSeviye = "yok"; oncekiTur = "engel"; gorulme = new Map();
+    tara(); bipDongu();
+    if (ayar.derinlik) derinlikBaslat();
+  }
+
+  function kameraKapat() {
+    if (akis) akis.getTracks().forEach((t) => { t.onended = null; t.stop(); });
+    akis = null; video.srcObject = null;
+  }
+
+  function dur() {
+    calisiyor = false; clearTimeout(bipZaman); clearTimeout(taraZaman); anlik.seviye = "yok"; derinlik.olcum = null;
+    kameraKapat();
+    try { kilit && kilit.release(); } catch (e) {} kilit = null;
+    ctx.clearRect(0, 0, katman.width, katman.height); yonCiz(null, null);
+    btn.textContent = "Başlat"; btn.classList.remove("calisiyor");
+    $("bos").hidden = false; durumGoster("Durduruldu.", "");
+    if (model) nesneYaz("Beklemede");
+    if (derinlik.durum === "hazir") derinYaz("Beklemede");
+    sus(); soyle("Durduruldu.", true);
+  }
+
+  btn.addEventListener("click", () => (calisiyor ? dur() : baslat()));
+  document.addEventListener("visibilitychange", async () => {
+    if (!calisiyor) return;
+    if (document.hidden) { anlik.seviye = "yok"; sus(); return; }
+    video.play().catch(() => {});
+    try { if (ses) await ses.resume(); } catch (e) {}
+    try { if ("wakeLock" in navigator) kilit = await navigator.wakeLock.request("screen"); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
